@@ -9,6 +9,8 @@ import tensorflow_probability as tfp
 import tree
 
 from softlearning.models.feedforward import feedforward_model
+from softlearning.models.convnet import custom_resnet_model
+from softlearning.models.utils import create_inputs
 from softlearning.distributions.bijectors import (
     ConditionalShift, ConditionalScale)
 
@@ -285,5 +287,39 @@ class FeedforwardGaussianPolicy(GaussianPolicy):
             'hidden_layer_sizes': self._hidden_layer_sizes,
             'activation': self._activation,
             'output_activation': self._output_activation,
+        }
+        return config
+
+
+class HaliteGaussianPolicy(GaussianPolicy):
+    def __init__(self,
+                 *args,
+                 **kwargs):
+
+        super(HaliteGaussianPolicy, self).__init__(*args, **kwargs)
+
+    def _shift_and_scale_diag_net(self, inputs, output_size):
+        input_map = inputs["halite_map"]
+        input_scalar = inputs["scalar_features"]
+
+        conv_net_output = custom_resnet_model(input_map)
+        concat = tf.keras.layers.concatenate([conv_net_output, input_scalar])
+        dense1 = tf.keras.layers.Dense(1024, activation="relu")(concat)
+        dense2 = tf.keras.layers.Dense(1024, activation="relu")(dense1)
+        shift_and_scale_diag = tf.keras.layers.Dense(output_size, name="output")(dense2)
+
+        shift, scale = tf.keras.layers.Lambda(
+            lambda x: tf.split(x, num_or_size_splits=2, axis=-1)
+        )(shift_and_scale_diag)
+        scale = tf.keras.layers.Lambda(
+            lambda x: tf.math.softplus(x) + 1e-5)(scale)
+        shift_and_scale_diag_model = tf.keras.Model(inputs, (shift, scale))
+
+        return shift_and_scale_diag_model
+
+    def get_config(self):
+        base_config = super(HaliteGaussianPolicy, self).get_config()
+        config = {
+            **base_config,
         }
         return config

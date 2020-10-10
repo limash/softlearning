@@ -4,6 +4,7 @@ from collections import OrderedDict
 import tensorflow as tf
 import tree
 
+from softlearning.models.convnet import ResidualUnit
 
 class BaseValueFunction:
     def __init__(self, model, observation_keys, name='value_function'):
@@ -109,7 +110,14 @@ class BaseValueFunction:
     def __setstate__(self, state):
         model_config = state.pop('model_config')
         model_weights = state.pop('model_weights')
-        model = tf.keras.Model.from_config(model_config)
+        try:
+            model = tf.keras.Model.from_config(model_config)
+        except ValueError:
+            # add check whether err massage is about ResidualUnit
+            model = tf.keras.Model.from_config(
+                model_config,
+                custom_objects={"ResidualUnit": ResidualUnit}
+            )
         model.set_weights(model_weights)
         state['model'] = model
         self.__dict__ = state

@@ -1,5 +1,7 @@
 from .vanilla import (  # noqa: unused-import
     feedforward_Q_function,
+    halite_Q_function,
+    double_halite_Q_function,
     double_feedforward_Q_function,
     ensemble_feedforward_Q_function,
 )

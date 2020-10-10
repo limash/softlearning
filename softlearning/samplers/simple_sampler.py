@@ -72,8 +72,12 @@ class SimpleSampler(BaseSampler):
         self._current_path.append(processed_sample)
 
         if terminal or self._path_length >= self._max_path_length:
-            last_path = tree.map_structure(
-                lambda *x: np.stack(x, axis=0), *self._current_path)
+            try:
+                last_path = tree.map_structure(lambda *x: np.stack(x, axis=0), *self._current_path)
+            except TypeError:
+                # for halite somehow tree.map_structure does not work, but tf.nest.map_structure works
+                import tensorflow as tf
+                last_path = tf.nest.map_structure(lambda *x: np.stack(x, axis=0), *self._current_path)
 
             self.pool.add_path({
                 key: value

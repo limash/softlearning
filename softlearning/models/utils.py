@@ -60,8 +60,9 @@ def create_inputs(shapes, dtypes=None):
 
     TODO(hartikainen): Need to figure out a better way for handling the dtypes.
     """
-    if dtypes is None:
-        dtypes = tree.map_structure(lambda _: None, shapes)
+    # if dtypes is None:
+    #     dtypes = tree.map_structure(lambda _: None, shapes)
+    dtypes = tree.map_structure(lambda _: dtypes, shapes)
     inputs = tree.map_structure_with_path(create_input, shapes, dtypes)
 
     return inputs

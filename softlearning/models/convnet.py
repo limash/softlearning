@@ -2,6 +2,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import tensorflow_addons as tfa
 from tensorflow.keras import layers
+from tensorflow import keras
 import tree
 
 
@@ -10,6 +11,68 @@ tfkl = tf.keras.layers
 tfpl = tfp.layers
 tfd = tfp.distributions
 tfb = tfp.bijectors
+
+
+class ResidualUnit(keras.layers.Layer):
+    def __init__(self, filters, strides=1, activation="relu", **kwargs):
+        super().__init__(**kwargs)
+        self.filters = filters
+        self.strides = strides
+        self.activation = keras.activations.get(activation)
+        self.main_layers = [
+            keras.layers.Conv2D(filters, 3, strides=strides, padding="same", use_bias=False),
+            keras.layers.BatchNormalization(),
+            self.activation,
+            keras.layers.Conv2D(filters, 3, strides=1, padding="same", use_bias=False),
+            keras.layers.BatchNormalization()
+        ]
+        self.skip_layers = []
+        if strides > 1:
+            self.skip_layers = [
+                keras.layers.Conv2D(filters, 1, strides=strides, padding="same", use_bias=False),
+                keras.layers.BatchNormalization()
+            ]
+
+    def call(self, inputs, **kwargs):
+        Z = inputs
+        for layer in self.main_layers:
+            Z = layer(Z)
+        skip_Z = inputs
+        for layer in self.skip_layers:
+            skip_Z = layer(skip_Z)
+        return self.activation(Z + skip_Z)
+
+    def get_config(self):
+        config = super(ResidualUnit, self).get_config()
+        config.update({"filters": self.filters,
+                       "strides": self.strides,
+                       "activation": keras.activations.serialize(self.activation)})
+        return config
+
+
+def custom_resnet_model(inputs):
+    """
+    Makes a ResNet with 33 layers
+    Args:
+        inputs: keras.layers.Input() object
+
+    Returns:
+        a keras layer - resnet
+    """
+    x = keras.layers.Conv2D(64, 3, strides=1, padding="same", use_bias=False)(inputs)
+    x = keras.layers.BatchNormalization()(x)
+    x = keras.layers.Activation("relu")(x)
+
+    prev_filters = 64
+    for filters in [64] * 3 + [128] * 4 + [256] * 6 + [512] * 3:
+        strides = 1 if filters == prev_filters else 2
+        x = ResidualUnit(filters, strides=strides)(x)
+        prev_filters = filters
+
+    # since the last res units have 512 feature maps, x should have length 512 after global pooling
+    x = keras.layers.GlobalAvgPool2D()(x)
+    x = keras.layers.Flatten()(x)
+    return x
 
 
 def convnet_model(

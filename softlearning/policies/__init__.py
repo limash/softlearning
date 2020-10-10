@@ -2,7 +2,7 @@ from softlearning.utils.serialization import (
     serialize_softlearning_object, deserialize_softlearning_object)
 
 from .base_policy import BasePolicy, LatentSpacePolicy, ContinuousPolicy  # noqa: unused-import
-from .gaussian_policy import GaussianPolicy, FeedforwardGaussianPolicy  # noqa: unused-import
+from .gaussian_policy import GaussianPolicy, FeedforwardGaussianPolicy, HaliteGaussianPolicy  # noqa: unused-import
 from .uniform_policy import UniformPolicyMixin, ContinuousUniformPolicy  # noqa: unused-import
 
 
