@@ -1,4 +1,6 @@
 import copy
+from itertools import count
+
 import tensorflow as tf
 
 from softlearning import value_functions
@@ -12,7 +14,9 @@ CONFIG = {
     'environment_params': {
         'training': {
             'domain': 'gym_halite:halite',
-            'kwargs': {},
+            'kwargs': {
+                'is_action_continuous': True
+            },
             'task': 'v0',
             'universe': 'gym',
         },
@@ -42,7 +46,8 @@ CONFIG = {
     'sampler_params': {
         'class_name': 'SimpleSampler',
         'config': {
-            'max_path_length': 399,  # the total number of steps in epizode
+            'max_path_length': 399,  # sample until terminal step or 'max_path_lenght',
+            # then record it into the replay pool
         },
     },
     'algorithm_params': {
@@ -56,7 +61,7 @@ CONFIG = {
             'eval_n_episodes': 1,
             'eval_render_kwargs': {},
             'min_pool_size': 399,  # ready_to_train = min_pool_size <= pool.size (a number of samples)
-            'n_epochs': 301,
+            'n_epochs': 1,
             'n_train_repeat': 1,
             'num_warmup_samples': 0,
             'policy_lr': 0.0003,
@@ -120,10 +125,22 @@ def main(variant_in):
     print("Initialization finished")
 
     train_generator = None
-    for i in range(10):
+    # it will iterate through the number of epochs 'n_epochs'
+    # during epoch:
+    # it will sample 'epoch_length' number of times (reset is not counted) to the pool
+    # also, it will train each step, if there are more samples than 'min_pool_size' in the replay pool
+    for i in count():
         if train_generator is None:
             train_generator = algorithm.train()
         diagnostics = next(train_generator)
+
+        # it should be before printing to prevent a double print the last epoch
+        try:
+            if diagnostics['done']:
+                break
+        except KeyError:
+            pass
+
         evalu_reward = diagnostics["evaluation"]["episode-reward-mean"]
         train_reward = diagnostics["training"]["episode-reward-mean"]
         print(f"Evaluation: reward mean is {evalu_reward}")
