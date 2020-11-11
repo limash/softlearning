@@ -91,14 +91,15 @@ def halite_Q_function(input_shapes,
     inputs = create_inputs(input_shapes, dtypes=tf.float32)
 
     obs, input_actions = inputs
-    input_map = obs["halite_map"]
+    input_map = obs["feature_maps"]
     input_scalar = obs["scalar_features"]
 
-    conv_net_output = custom_resnet_model(input_map)
+    # conv_net_output = custom_resnet_model(input_map)
+    conv_net_output = tf.keras.layers.Flatten()(input_map)
     concat = tf.keras.layers.concatenate([conv_net_output, input_scalar, input_actions])
     dense1 = tf.keras.layers.Dense(1024, activation="relu")(concat)
     dense2 = tf.keras.layers.Dense(1024, activation="relu")(dense1)
-    output = tf.keras.layers.Dense(1, name="output")(dense2)
+    output = tf.keras.layers.Dense(1, activation="linear", name="output")(dense2)
 
     Q_model = tf.keras.Model(inputs=inputs, outputs=output, name=name)
     Q_function = StateActionValueFunction(

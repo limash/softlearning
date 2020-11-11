@@ -299,14 +299,15 @@ class HaliteGaussianPolicy(GaussianPolicy):
         super(HaliteGaussianPolicy, self).__init__(*args, **kwargs)
 
     def _shift_and_scale_diag_net(self, inputs, output_size):
-        input_map = inputs["halite_map"]
+        input_map = inputs["feature_maps"]
         input_scalar = inputs["scalar_features"]
 
-        conv_net_output = custom_resnet_model(input_map)
+        # conv_net_output = custom_resnet_model(input_map)
+        conv_net_output = tf.keras.layers.Flatten()(input_map)
         concat = tf.keras.layers.concatenate([conv_net_output, input_scalar])
         dense1 = tf.keras.layers.Dense(1024, activation="relu")(concat)
         dense2 = tf.keras.layers.Dense(1024, activation="relu")(dense1)
-        shift_and_scale_diag = tf.keras.layers.Dense(output_size, name="output")(dense2)
+        shift_and_scale_diag = tf.keras.layers.Dense(output_size, activation="linear", name="output")(dense2)
 
         shift, scale = tf.keras.layers.Lambda(
             lambda x: tf.split(x, num_or_size_splits=2, axis=-1)
